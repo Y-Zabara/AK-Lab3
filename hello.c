@@ -6,9 +6,9 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *    notice, this list_node of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
+ *    notice, this list_node of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
@@ -40,26 +40,22 @@ MODULE_AUTHOR("y_zabara_io14");
 MODULE_DESCRIPTION("Hello, world in Linux Kernel Training");
 MODULE_LICENSE("Dual BSD/GPL");
 
-// Оголошення структури для елемента списку
-struct hello_event {
-	struct list_head list;
-	ktime_t timestamp;
-};
-
-// Голова списку
-static LIST_HEAD(hello_list);
-
 static uint howmany = 1;
 
 module_param(howmany, uint, S_IRUGO);
-
-// Опис параметра для modinfo
 MODULE_PARM_DESC(howmany, "Number of printed lines 'Hello, world!'");
+
+struct hello_list {
+	struct list_head list_node;
+	ktime_t time;
+};
+
+static LIST_HEAD(my_list_head);
 
 static int __init hello_init(void)
 {
 	uint i;
-	struct hello_event *event;
+	struct hello_list *md;
 
 	if (howmany == 0 || (howmany > 5 && howmany <= 10))
 		printk(KERN_EMERG "Warning: howmany is 0 or between 5 and 10.\n");
@@ -70,14 +66,10 @@ static int __init hello_init(void)
 	}
 
 	for (i = 0; i < howmany; ++i) {
-		event = kmalloc(sizeof(struct hello_event), GFP_KERNEL);
+		md = kmalloc(sizeof(struct hello_list), GFP_KERNEL);
 
-//		if (!event) {
-//			pr_err("Error allocating memory for hello_event.\n");
-//			return -ENOMEM;
-//		}
-		event->timestamp = ktime_get();
-		list_add_tail(&event->list, &hello_list);
+		md->time = ktime_get();
+		list_add_tail(&md->list_node, &my_list_head);
 		printk(KERN_EMERG "Hello, world!\n");
 	}
 
@@ -86,14 +78,15 @@ static int __init hello_init(void)
 
 static void __exit hello_exit(void)
 {
-	struct hello_event *event, *tmp;
+	struct hello_list *md, *tmp;
 
-	list_for_each_entry_safe(event, tmp, &hello_list, list)	{
-		printk(KERN_EMERG "Event time: %lld ns\n", ktime_to_ns(event->timestamp));
-		list_del(&event->list);
-		kfree(event);
+	list_for_each_entry_safe(md, tmp, &my_list_head, list_node)	{
+		printk(KERN_EMERG "md time: %lld ns\n", ktime_to_ns(md->time));
+		list_del(&md->list_node);
+		kfree(md);
 	}
 
+	BUG_ON(!list_empty(&my_list_head));
 	printk(KERN_EMERG "Goodbye, world!\n");
 }
 
